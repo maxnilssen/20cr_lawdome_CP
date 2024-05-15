@@ -1,0 +1,172 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+code for calculating the trends in annual node frequency, 20CRv3 precip at LD, and DSS accum
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(dplyr)
+
+```
+
+
+
+```{r}
+# read in daily csv file
+daily <- read_csv("daily_node_precip.csv")
+head(daily)
+```
+```{r}
+# read in annual precip and accum file
+annual_PA<-read_csv("annual_accum_precip_LD.csv")
+head(annual_PA)
+```
+
+```{r}
+# make dataframe that has year as a column, and each node as a column, and the frequency of each node as the data
+nodes12_freq <- daily %>%
+  group_by(year, node) %>%
+  dplyr::summarise(node_freq=length(node))
+
+nodes12_freq_wide<-pivot_wider(nodes12_freq, names_from=node, values_from=node_freq) 
+
+# change column names so they aren't integers
+colnames(nodes12_freq_wide)<-c("year","n1","n2","n3","n4","n5","n6","n7","n8","n9","n10","n11","n12")
+# replace na vals with 0
+nodes12_freq_wide[is.na(nodes12_freq_wide)]<-0
+
+head(nodes12_freq_wide)
+```
+
+
+
+```{r}
+# join annual_PA with node freq df
+df_annual <- merge(annual_PA, nodes12_freq_wide)
+
+head(df_annual)
+```
+```{r}
+# subset into different time periods
+
+df_annual_1900_1978 <- df_annual %>% filter(year <1979)
+df_annual_1979_2015 <- df_annual %>% filter(year >=1979)
+df_1957 <- df_annual %>% filter(year>1956)
+```
+
+```{r}
+# use lm to calculate trend in dss accum, full time period
+
+summary(lm(accum_DSS_m ~ year, df_annual))
+```
+```{r}
+# use lm to calculate trend in 20cr precip, full time period
+
+summary(lm(annual_precip_LD_mm ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in 20cr precip, 1900-1978
+
+summary(lm(annual_precip_LD_mm ~ year, df_annual_1900_1978))
+```
+
+```{r}
+# use lm to calculate trend in 20cr precip, 1900-1978
+
+summary(lm(annual_precip_LD_mm ~ year, df_annual_1979_2015))
+```
+```{r}
+# use lm to calculate trend in dss accum, 1979-2015
+
+summary(lm(accum_DSS_m ~ year, df_annual_1979_2015))
+```
+
+
+
+
+
+```{r}
+# use lm to calculate trend in node 1
+
+summary(lm(n1 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 2
+
+summary(lm(n2 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 3
+
+summary(lm(n3 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 4
+
+summary(lm(n4 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 5
+
+summary(lm(n5 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 6
+
+summary(lm(n6 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 7
+
+summary(lm(n7 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 8
+
+summary(lm(n8 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 9
+
+summary(lm(n9 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 10
+
+summary(lm(n10 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 11
+
+summary(lm(n11 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 12
+
+summary(lm(n12 ~ year, df_annual))
+```
+
+```{r}
+# use lm to calculate trend in node 12, 1957-2015
+
+summary(lm(n12 ~ year, df_1957))
+```
+
+
+

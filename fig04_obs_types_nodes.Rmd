@@ -1,0 +1,257 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+library(tidync)
+library(dplyr)
+
+library(ggplot2)
+
+library(cowplot)
+
+```
+
+
+```{r}
+daily <- read_csv("daily_node_precip.csv")
+head(daily)
+```
+
+```{r}
+
+# read in nc file with obcounts in study area
+
+obcount_nc <- tidync::tidync('assim_obcount_study_area.nc')  %>%
+ hyper_filter(time = lubridate::as_datetime(time * 3600*24, origin = "0001-1-1") < 
+                lubridate::as_datetime("2015-12-31")) %>%
+  hyper_tibble() %>%
+ mutate(date = lubridate::as_datetime(time * 3600*24, origin = "0001-1-1")) %>%
+  dplyr::select(-c(time)) #get rid of unwanted columns
+head(obcount_nc)
+```
+
+```{r}
+
+# obcounts south of 50 degrees, in study area
+obcount_study_s50 <- obcount_nc %>% 
+  filter(lat <= (-50))
+
+# fix date format
+obcount_study_s50$date <- as.Date(obcount_study_s50$date)
+
+# add a year column
+
+obcount_study_s50$year<-as.integer(format(obcount_study_s50$date, "%Y"))
+
+# count observations by year in full area (south of 50S in study area)
+obcount_s50_annual <- obcount_study_s50 %>% 
+  group_by(year) %>% 
+  summarise(annual_obs_study_s50 = sum(obcount))
+
+head(obcount_s50_annual)
+```
+
+```{r}
+
+obcountplot_s50 <-
+obcount_s50_annual %>% 
+  filter(year >= 1900) %>% 
+  ggplot(aes(year, annual_obs_study_s50))+
+  geom_line() +
+  geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
+  scale_y_log10(labels = scales::comma) +
+  theme_bw() +
+  theme(axis.line = element_line(color='black', size=0.3),
+        plot.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+         axis.title.x=element_blank(),
+         axis.text=element_text(size=8),
+      axis.title.y=element_text(size=9),
+    #  axis.title.y = element_text(size=7),
+       aspect.ratio=6/20
+      ) +
+  scale_x_continuous(breaks = seq(1900,2015,10)) +
+  labs(y = "Observation count")
+  
+obcountplot_s50         
+```
+
+```{r}
+# make df that shows the number of days each type per year
+type_freq<- daily %>%
+  group_by(year) %>%
+  count(Type, .drop = FALSE) %>% 
+  mutate(pct = prop.table(n)) 
+
+head(type_freq)
+```
+
+
+
+```{r}
+
+type_freq_plot_nonormal <-
+  type_freq %>% 
+  filter(Type != "Normal") %>% 
+ggplot(aes(x=year, y=n, color=Type)) +
+   geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
+  geom_line() +
+    scale_color_manual(values=c(
+    "#035586",
+    "#3B94D4",
+      "grey65" )) +
+  
+  theme_bw() +
+  theme(axis.line = element_line(color='black', size=0.3),
+        plot.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+      #  panel.border = element_blank(),
+         legend.text=element_text(size=9),
+      legend.title=element_text(size=9),
+         axis.title.x=element_blank(),
+         axis.text=element_text(size=8),
+      axis.title.y=element_text(size=9),
+     # axis.title.y=element_text(size=9),
+       aspect.ratio=6/20
+     #legend.position = "none"
+      ) +
+  scale_x_continuous(breaks = seq(1900,2015,10)) +
+  labs(x = "Year", y = "Annual frequency", color = "Precipitation type")
+
+type_freq_plot_nonormal
+```
+
+```{r}
+#group by moxed/zonal/meridional
+
+
+#merid: 1,3,4
+#mixed: 2,5,8,10,11
+#zonal: 9,12
+#transitional: 6,7
+
+daily$node_o<-factor(daily$node, levels=c("11", "10", "8", "5", "2", #mixed
+                                              "6", "7", #transitional
+                                              "9", "12", #zonal
+                                              "4", "3", "1" #meridional
+                                              ))
+head(daily)
+```
+
+```{r}
+
+
+node_freq_plot<-
+daily %>% 
+  group_by(year) %>% 
+  count(node_o) %>% 
+  mutate(pct = prop.table(n)) %>% 
+  ggplot(aes(x=year, y=pct, fill=node_o)) +
+  geom_col(position = position_fill(reverse=FALSE), width=0.9) +
+  scale_fill_manual(values=c(
+"#dee8ff",
+"#bbb9e4",
+"#9484C9",
+"#623EA3",
+"#2c0664",
+"#D1D1D1",
+"#969696",
+"#addd8e",
+"#31a354",
+"#F9AEC0",
+"#f768a1",
+"#B90C7D"),
+limits=c("11", "10", "8", "5", "2",
+          "6", "7",
+          "9", "12", 
+          "4", "3", "1" 
+          )) +
+  scale_y_continuous(labels = scales::percent) +
+   geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
+  theme_bw() +
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=8),
+      legend.text=element_text(size=8),
+      legend.title=element_text(size=9),
+    axis.title=element_text(size=9),
+   # axis.title.y=element_text(size=9),
+    aspect.ratio=7/20,
+    legend.key.size = unit(0.35, "cm")
+   # legend.position = "none"
+    ) +
+    scale_x_continuous(breaks = seq(1900,2015,10)) +
+  labs(x="Year", y="Annual frequency", fill="Synoptic type")
+
+
+node_freq_plot
+```
+
+```{r}
+
+
+p <- plot_grid(obcountplot_s50, type_freq_plot_nonormal, node_freq_plot ,  labels=c("(a)", "(b)", "(c)"), ncol = 1, nrow = 3, align = "hv", axis= "rl", label_size = 12, label_fontface = "plain")
+p
+  
+```
+
+
+
+```{r}
+save_plot("fig04.pdf", p3, ncol = 1, base_height=6.5, base_width =7.2)
+```
+
+
+
+
+
+```{r}
+# calculate the % of precip that came from each precip type, 1900-2015
+daily %>% 
+  group_by(Type) %>% 
+  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
+  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
+
+```
+
+
+```{r}
+# calculate the % of precip that came from each precip type, 1900-1947
+daily %>% 
+  filter(year<1948) %>% 
+  group_by(Type) %>% 
+  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
+  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
+
+```
+
+```{r}
+# calculate the % of precip that came from each precip type, 1948-1956
+daily %>% 
+  filter(year>=1948 & year <1957) %>% 
+  group_by(Type) %>% 
+  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
+  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
+
+```
+
+```{r}
+# calculate the % of precip that came from each precip type, 1957-2015
+daily %>% 
+  filter(year>=1957) %>% 
+  group_by(Type) %>% 
+  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
+  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
+
+```
+
+
+

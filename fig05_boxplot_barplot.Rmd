@@ -1,0 +1,123 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(chron)
+library(lattice)
+library(RColorBrewer)
+library(dplyr)
+
+library(ncdf4)
+
+library("tidync") #A Tidy Approach to 'NetCDF' Data Exploration and Extraction
+
+library("ggcorrplot") #Visualization of a correlation matrix using ggplot2
+library("ggplot2") #plot results
+library(MASS)
+
+library(gridExtra)
+library(cowplot)
+library(patchwork)
+```
+
+
+```{r}
+daily <- read_csv("daily_precip_node_type_season.csv")
+head(daily)
+```
+```{r}
+# make node and Type factors
+
+daily$node <- as.factor(daily$node)
+daily$Type <- as.factor(daily$Type)
+
+```
+
+
+
+```{r}
+median(daily$precip_daily)
+quantile(daily$precip_daily, prob=c(.25,.5,.75), type=1)
+```
+
+
+
+
+
+
+```{r}
+#box plot
+#daily precip at ld, full time period
+
+boxp <-
+ggplot(daily, aes(node, precip_daily)) +
+         geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = 0.7992, ymax = 3.0348),
+                   fill = "#EDDEFF", alpha = 0.05, color=NA) +
+  geom_boxplot(width=0.6) +
+   geom_hline(yintercept = 1.7928, linetype="dashed", col="red") +
+
+  labs(x="Synoptic type", y="Daily precipitation (mm)") +
+  theme_bw() +
+    theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    aspect.ratio=9/20,
+    #axis.title.x = element_blank(), 
+    axis.title=element_text(size=9),
+    axis.text=element_text(size=9)
+   # plot.margin = margin(0,0,0,0)
+    )
+
+boxp
+```
+
+
+```{r}
+freqp <-
+daily %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x=node, fill = Type)) +
+  scale_fill_manual(values=c(
+    "#035586",
+    "#3B94D4",
+    "#8DBBEC",
+    "grey65" )) +
+  theme_bw() +
+
+    theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    aspect.ratio=9/20,
+    axis.text.y=element_text(size=8),
+    axis.text.x=element_text(size=9),
+    axis.title.y=element_text(size=9),
+    axis.title.x = element_blank(),
+    legend.text=element_text(size=8),
+    legend.title=element_text(size=9),
+    legend.key.size = unit(0.5, "cm")
+  #  plot.margin = margin(0,0,0,0),
+    
+   # legend.position = c(0.5, 0.81)
+    ) +
+  labs(x= "Node", y= "Count", fill = "Precipitation type")
+
+freqp
+```
+```{r}
+p2 <- plot_grid(freqp, boxp, labels=c("(a)", "(b)"), ncol = 1, nrow = 2, align = "hv", axis="rl", label_size = 12, label_fontface = "plain")
+p2
+```
+
+```{r}
+save_plot("nodes_boxplot_barplot_.pdf", p2, ncol = 1, base_height=6, base_width =8)
+```
+
+
+

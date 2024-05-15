@@ -1,0 +1,129 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+code for making datasets, which are used for making plots etc
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(dplyr)
+
+library("tidync") #A Tidy Approach to 'NetCDF' Data Exploration and Extraction
+
+```
+
+```{r}
+#read in cvs file with som node for each year
+nodes12<-read_csv('SOM_20CR_4_3_1900.csv')
+nodes12$date<-as.Date(nodes12$date, "%d/%m/%Y") # make date column the right format
+#nodes as factors
+nodes12$node<-as.factor(nodes12$node)
+head(nodes12)
+```
+
+```{r}
+#Make netcdf connection, filter by time, read into tibble, create date column/
+#netcdf file of 20cr precip rate 1900-2015
+pratenc <- tidync::tidync('sprate_1900_2015_small.nc')  %>%
+ hyper_filter(time = lubridate::as_datetime(time * 3600, origin = "1800-01-01 00:00:00") < 
+                lubridate::as_datetime("2015-12-31 00:00:00")) %>%
+  hyper_tibble() %>%
+ mutate(date = lubridate::as_datetime(time * 3600, origin = "1800-01-01 00:00:00")) %>%
+  dplyr::select(-c(time)) #get rid of unwanted columns
+head(pratenc)
+```
+```{r}
+# read in accumulation from dss ice core, 1986-2015
+# then subset for 1900-2015
+acc_dss<-read_csv('dss_winter.csv')
+acc_dss<-subset(acc_dss, year>1899)
+#rename(df, newname=oldname)
+acc_dss<-rename(acc_dss, accum_DSS_m=accum)
+head(acc_dss)
+```
+
+
+```{r}
+#the netcdf file contains lots of coordinates, subset to location for law dome
+prld <- subset(pratenc, lon==113 & lat==-67) #law dome
+
+#convert prate k/m2/s into daily precip mm by multiplying by 86400
+prld$precip_daily<-prld$prate*86400
+
+# remove unwante cols
+prld<-subset(prld, select=-c(lon,lat,prate))
+
+prld$date<-as.Date(prld$date, "%d/%m/%Y") # make date column the right format
+
+head(prld)
+```
+
+```{r}
+# join prld and nodes 12 to get df with cols: date, node, daily precip at ld
+
+df_daily <- merge(nodes12, prld)
+
+head(df_daily)
+```
+```{r}
+# mark each day in the following way: Extreme for days over the 99th percentile, High for days over 90th percentile but under 99th, Normal for days under 90th percentile, Zero for days with 0 precip
+
+
+#get the 90th percentile of daily precip
+LD_90p<-quantile(df_daily$precip_daily, probs=0.9)
+
+
+
+# 99 perc precip
+LD_99p<-quantile(df_daily$precip_daily, probs=0.99)
+
+# add a new column that marks days as Extreme, High, Normal, or Zero
+
+df_daily$Type <- as.factor(with(df_daily, ifelse(precip_daily > LD_99p, 'Extreme',
+                                        ifelse(precip_daily > LD_90p, 'High', 
+                                        ifelse(precip_daily == 0, 'Zero',
+                                               'Normal')))))
+
+
+head(df_daily)
+```
+
+```{r}
+# add a year column 
+df_daily$year<-as.integer(format(df_daily$date, "%Y"))
+
+# save df_daily as a csv file
+write.csv(df_daily, "daily_node_precip.csv", row.names=FALSE)
+```
+
+```{r}
+# now make annual dataset
+
+#add year column to prld
+prld$year<-as.integer(format(prld$date, "%Y"))
+
+# sum up 20cr daily precip at LD to get annual precip at LD
+
+precip_annual_ld <- prld %>%
+  group_by(year) %>%
+  summarise(annual_precip_LD_mm=sum(precip_daily))
+
+head(precip_annual_ld)
+```
+
+```{r}
+# join annual 20cr precip df with accum_DSS df
+
+df_annual_precip_accum <- merge(acc_dss, precip_annual_ld)
+
+head(df_annual_precip_accum)
+
+```
+
+```{r}
+# save df_annual_precip_accum as a csv file
+write.csv(df_annual_precip_accum, "annual_accum_precip_LD.csv", row.names=FALSE)
+```

@@ -1,0 +1,146 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+code for node correlation table (table 3)
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(dplyr)
+library(pracma)
+
+```
+
+
+
+```{r}
+# read in daily csv file
+daily <- read_csv("daily_node_precip.csv")
+head(daily)
+```
+```{r}
+# read in annual precip and accum file
+annual_PA<-read_csv("annual_accum_precip_LD.csv")
+head(annual_PA)
+```
+
+```{r}
+# make dataframe that has year as a column, and each node as a column, and the frequency of each node as the data
+nodes12_freq <- daily %>%
+  group_by(year, node) %>%
+  dplyr::summarise(node_freq=length(node))
+
+nodes12_freq_wide<-pivot_wider(nodes12_freq, names_from=node, values_from=node_freq) 
+
+# change column names so they aren't integers
+colnames(nodes12_freq_wide)<-c("year","n1","n2","n3","n4","n5","n6","n7","n8","n9","n10","n11","n12")
+# replace na vals with 0
+nodes12_freq_wide[is.na(nodes12_freq_wide)]<-0
+
+head(nodes12_freq_wide)
+```
+
+
+
+```{r}
+# join annual_PA with node freq df
+df_annual <- merge(annual_PA, nodes12_freq_wide)
+
+head(df_annual)
+```
+
+
+
+
+```{r}
+# subset dataframes into time periods: 1948-2015, 1957-2015, 1979-2015
+
+df_1900 <-df_annual
+df_1948 <- df_annual %>% filter(year>1947)
+df_1957 <- df_annual %>% filter(year>1956)
+df_1979 <- df_annual %>% filter(year>1978)
+
+
+```
+
+```{r}
+# function that detrends all the variables except for year, and it keeps year as it is
+# linear_detrend <- function(df) {
+#   detrended_df <- df
+#   for (i in 2:ncol(df)) {
+#     detrended <- lm(df[, i] ~ seq_along(df[, i]))
+#     detrended_df[, i] <- resid(detrended)
+#   }
+#   return(detrended_df)
+# }
+
+linear_detrend <- function(df) {
+  detrended_df <- df
+  for (i in 2:ncol(df)) {
+    detrended <- lm(df[[i]] ~ seq_along(df[[i]]))
+    detrended_df[[i]] <- resid(detrended)
+  }
+  return(detrended_df)
+}
+```
+
+```{r}
+# detrend each df
+
+df_1900_dt <- linear_detrend(df_1900)
+df_1948_dt <- linear_detrend(df_1948)
+df_1957_dt <- linear_detrend(df_1957)
+df_1979_dt <- linear_detrend(df_1979)
+
+```
+
+```{r}
+# spearman correlation (r) scores
+data.frame(cor(df_1900_dt, method="spearman"))
+```
+
+```{r}
+# p values
+data.frame(cor_pmat(df_1900_dt, method="spearman", exact=FALSE))
+
+```
+
+```{r}
+# spearman correlation (r) scores
+data.frame(cor(df_1948_dt, method="spearman"))
+```
+
+```{r}
+# p values
+data.frame(cor_pmat(df_1948_dt, method="spearman", exact=FALSE))
+
+```
+
+```{r}
+# spearman correlation (r) scores
+data.frame(cor(df_1957_dt, method="spearman"))
+```
+
+```{r}
+# p values
+data.frame(cor_pmat(df_1957_dt, method="spearman", exact=FALSE))
+
+```
+
+
+```{r}
+# spearman correlation (r) scores
+data.frame(cor(df_1979_dt, method="spearman"))
+```
+
+```{r}
+# p values
+data.frame(cor_pmat(df_1979_dt, method="spearman", exact=FALSE))
+
+```
+
+
+

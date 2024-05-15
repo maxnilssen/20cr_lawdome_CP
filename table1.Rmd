@@ -1,0 +1,192 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(dplyr)
+library(pracma)
+
+```
+
+
+
+```{r}
+# read in annual precip and accum file
+annual_PA<-read_csv("annual_accum_precip_LD.csv")
+head(annual_PA)
+```
+
+
+
+
+
+```{r}
+# subset dataframes into time periods: 1948-2015, 1957-2015, 1979-2015
+
+df_1900 <-annual_PA
+df_1948 <- annual_PA %>% filter(year>1947)
+df_1957 <- annual_PA %>% filter(year>1956)
+df_1979 <- annual_PA %>% filter(year>1978)
+
+
+```
+
+```{r}
+# function that detrends all the variables except for year, and it keeps year as it is
+# linear_detrend <- function(df) {
+#   detrended_df <- df
+#   for (i in 2:ncol(df)) {
+#     detrended <- lm(df[, i] ~ seq_along(df[, i]))
+#     detrended_df[, i] <- resid(detrended)
+#   }
+#   return(detrended_df)
+# }
+
+linear_detrend <- function(df) {
+  detrended_df <- df
+  for (i in 2:ncol(df)) {
+    detrended <- lm(df[[i]] ~ seq_along(df[[i]]))
+    detrended_df[[i]] <- resid(detrended)
+  }
+  return(detrended_df)
+}
+```
+
+```{r}
+# detrend each df
+
+
+df_1900_dt <- linear_detrend(df_1900)
+df_1948_dt <- linear_detrend(df_1948)
+df_1957_dt <- linear_detrend(df_1957)
+df_1979_dt <- linear_detrend(df_1979)
+
+```
+
+```{r}
+# do non detrended correlations first, which are the numbers in brackets in table 1
+# lm() gives adjusted R squared,
+# cor() gives r value
+# get correlation between 20cr annual precip at LD, and DSS ice core accum
+# full period
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1900))
+```
+
+```{r}
+data.frame(cor(df_1900, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1900, method="pearson", exact=FALSE))
+```
+
+```{r}
+
+# 1948-2015
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1948))
+```
+
+```{r}
+data.frame(cor(df_1948, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1948, method="pearson", exact=FALSE))
+```
+
+```{r}
+
+# 1957-2015
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1957))
+```
+
+```{r}
+data.frame(cor(df_1957, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1957, method="pearson", exact=FALSE))
+```
+
+
+```{r}
+
+# 1979-2015
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1979))
+```
+
+```{r}
+data.frame(cor(df_1979, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1979, method="pearson", exact=FALSE))
+```
+
+
+
+
+```{r}
+# now do detrended
+# full period
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1900_dt))
+```
+
+```{r}
+data.frame(cor(df_1900_dt, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1900_dt, method="pearson", exact=FALSE))
+```
+
+```{r}
+# detrended
+# 1948-2015
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1948_dt))
+```
+
+```{r}
+data.frame(cor(df_1948_dt, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1948_dt, method="pearson", exact=FALSE))
+```
+
+```{r}
+
+# 1957-2015
+# detrended
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1957_dt))
+```
+
+```{r}
+data.frame(cor(df_1957_dt, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1957_dt, method="pearson", exact=FALSE))
+```
+
+
+```{r}
+
+# 1979-2015
+# detrended
+summary(lm(annual_precip_LD_mm~accum_DSS_m, data=df_1979_dt))
+```
+
+```{r}
+data.frame(cor(df_1979_dt, method="pearson"))
+```
+
+```{r}
+data.frame(cor_pmat(df_1979_dt, method="pearson", exact=FALSE))
+```
+
+

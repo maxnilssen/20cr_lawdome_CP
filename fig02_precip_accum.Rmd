@@ -1,0 +1,86 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r}
+daily <- read_csv("daily_node_precip.csv")
+head(daily)
+```
+
+```{r}
+annual_PA<-read_csv("annual_accum_precip_LD.csv")
+head(annual_PA)
+```
+
+```{r}
+
+
+# make df that shows the total precip for each type by year
+E99_LD <- daily %>%
+  group_by(Type,year) %>%
+  dplyr::summarise(total_precip=sum(precip_daily), count = length(Type))
+
+
+head(E99_LD)
+```
+
+```{r}
+# order the levels of type_LD so that it plots with Normal on the bottom, then High, then Extreme
+E99_LD$Type<-factor(E99_LD$Type, levels=c("Extreme","High","Normal"))
+head(E99_LD)
+```
+
+```{r}
+ggplot() +
+ 
+  geom_col(E99_LD, mapping = aes(fill=Type, x=year, y=total_precip)) +
+    geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
+ 
+      guides(fill = guide_legend(reverse=TRUE)) +
+  scale_fill_manual(values=c(
+"#8DBBEC",
+"#3B94D4",
+"#035586"),
+    limits=c("Normal","High","Extreme"),
+#labels = c("Normal (<90)","High (90-99)","Extreme (>99)")) +
+  labels = c("Normal","High","Extreme")) +
+  geom_line(annual_PA, mapping = aes(x=year, y=accum_DSS_m*1000), color = "#EA5D80"
+            , size=0.6
+            ) +
+  theme_bw() +
+    theme(axis.line = element_line(color='black', size=0.3),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    legend.text=element_text(size=8),
+    #legend.title=element_text(size=8),
+    legend.title=element_blank(),
+    axis.title=element_text(size=9),
+    axis.text=element_text(size=8),
+    aspect.ratio=10/20,
+    legend.position = c(0.23, 0.9),
+    legend.key.size = unit(0.3, "cm"))  +
+  scale_x_continuous(breaks = seq(1900,2015,10)) +
+    scale_y_continuous(
+      name = "20CRv3 annual precipitation at LD (mm)",
+
+      sec.axis = sec_axis(~./1000, name = "DSS accumulation (m ice equivalent)")
+    ) +
+  labs(x="Year")
+
+#ggsave("total_precip_LD_and_DSS_accum_legend_in_plot.pdf", width=8, height=3.5)
+
+```
+
+
