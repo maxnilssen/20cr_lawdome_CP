@@ -263,10 +263,17 @@ ggplot(data = som_temporal_correlations, aes((.estimate ^ 0.5), colour = node, g
   labs(x = "Pearson correlation")
 
 ```
+
+
+```{r}
+# add r column, .estimate column is r squared
+som_temporal_correlations$r<-som_temporal_correlations$.estimate^0.5
+```
+
+
 ```{r}
 write.csv(som_temporal_correlations, "som_temporal_correlations_r.csv")
 ```
-
 
 ```{r}
 ggplot(data = som_temporal_correlations, aes((.estimate^0.5), group = node)) +
@@ -284,15 +291,6 @@ ggplot(data = som_temporal_correlations, aes(r, group = node)) +
   theme_bw() +
   labs(x = "Pearson correlation")
 ```
-
-
-
-```{r}
-# add r column, .estimate column is r squared
-som_temporal_correlations$r<-som_temporal_correlations$.estimate^0.5
-```
-
-
 
 
 
