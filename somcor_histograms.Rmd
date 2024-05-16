@@ -1,0 +1,81 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+# read in som correlation csv
+#somcor<-read_csv("som_corr_4x3.csv")
+somcor<-read_csv("som_temporal_correlations_r.csv")
+#make node column factor
+somcor$node<-factor(somcor$node)
+head(somcor)
+```
+
+```{r}
+# remove unwanted cols
+somcor<-subset(somcor, select=-c(X1, .metric, .estimator))
+head(somcor)
+```
+
+```{r}
+# summarise based on nodes
+
+somsum<-somcor %>%
+  group_by(node) %>%
+  dplyr::summarise(mean=round(mean(r),3),
+                   median=round(median(r),4),
+                   IQR=round(IQR(r),2),
+                   count=length(r),
+                   over0.5=round(sum(r>0.5)/length(r),2),
+                   over0.6=round(sum(r>0.6)/length(r),2),
+                   over0.7=round(sum(r>0.7)/length(r),2),
+                   over0.8=round(sum(r>0.8)/length(r),3),
+                   )
+head(somsum)
+
+```
+
+```{r}
+# save df as a csv 
+write.csv(somsum, "som_corr_summary.csv")
+```
+
+
+
+```{r}
+print("mean")
+mean(somcor$r)
+
+print("median")
+median(somcor$r)
+
+print("over 0.5")
+sum(somcor$r>0.5)/nrow(somcor)
+
+print("over 0.6")
+sum(somcor$r>0.6)/nrow(somcor)
+
+print("over 0.7")
+sum(somcor$r>0.7)/nrow(somcor)
+
+print("over 0.8")
+sum(somcor$r>0.8)/nrow(somcor)
+
+nrow(somcor)
+```
+
+```{r}
+ggplot(somcor, aes(r)) +
+  geom_histogram(binwidth=0.05, color="black", fill="white") +
+  scale_x_continuous(breaks=c(0, 0.2, 0.4, 0.6, 0.8, 1)) +
+  facet_wrap(~node) +
+  theme_bw() +
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()) 
+  
+ggsave("somcor.pdf", width=7, height=5)
+```
+
