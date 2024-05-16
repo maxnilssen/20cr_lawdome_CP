@@ -1,0 +1,382 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+rm(list = ls()) # clear memory
+```
+
+```{r}
+#### Load library packages ####
+
+library("tidyverse")
+library(ncdf4)
+#install.packages("tidync")
+library("tidync") #A Tidy Approach to 'NetCDF' Data Exploration and Extraction
+#install.packages("kohonen")
+library("kohonen") #SOM package
+#install.packages("viridis")
+library("viridis") #Colorblind-Friendly Color Maps for R
+#install.packages("ggcorrplot") 
+library("ggcorrplot") #Visualization of a correlation matrix using ggplot2
+library("ggplot2") #plot results
+#install.packages("yardstick")
+#library("yardstick") #package to estimate how well models are working using tidy data principles
+```
+
+```{r}
+#Make netcdf connection, filter by time, read into tibble, create date column/
+memory.limit(99999999) #increase memory limit
+gc() #garbage collection
+z500_daily_subset <- tidync::tidync('anom_1900_2015.nc')  %>%
+ hyper_filter(time = lubridate::as_datetime(time * 3600, origin = "1800-01-01 00:00:00") < 
+                lubridate::as_datetime("2015-12-31 00:00:00")) %>%
+ 
+  hyper_tibble() %>%
+ mutate(date = lubridate::as_datetime(time * 3600, origin = "1800-01-01 00:00:00")) %>%
+  dplyr::select(-c(level,time)) #get rid of unwanted columns
+```
+
+```{r}
+head(z500_daily_subset)
+summary(z500_daily_subset)
+```
+
+
+
+```{r}
+#convert geopotential pressure anomaly to geopotential height anomaly by dividing by gravity
+#overwrite the z column with the calculated value
+#i don't think i need to do this, my datast is already geopotential height anomalty i think
+#g = 9.80665
+#z500_daily_subset$z = z500_daily_subset$z/g
+#head(z500_daily_subset)
+#summary(z500_daily_subset)
+
+```
+
+```{r}
+#Currently the dataset consists of 4 columns: z, lon, lat and time - this is called long form
+#But the SOM algorithm input requires the dataset to have time as rows, and each combination of lat/lon as columns - this is called wide form
+
+#To restructure the dataset we need to use the pivot function to transform the long form dataset into wide from. 
+
+#Pivots data from long to wide format. 
+#Each row is a date, each column is the geopotential at an individual coordinate
+
+##my dataset has the column named hgt instead of z
+
+z500_daily_subset_wide <- z500_daily_subset %>%
+  pivot_wider(., id_cols = date, names_from = c(lat, lon), values_from = `hgt`)
+```
+
+```{r}
+#lets check the data again
+head(z500_daily_subset_wide)
+
+```
+```{r}
+# save as csv
+#write.csv(z500_daily_subset_wide, "z500_daily_subset_wide.csv")
+```
+
+```{r}
+#We need to remove the date column for the actual som calculation
+z500_daily_subset1d <- z500_daily_subset_wide %>%
+  dplyr::select(-date)
+```
+
+
+```{r}
+#### SET UP SOM PARAMETERS ####
+
+#SOM sequential mode: training is goverened by: 
+# 1. learning rate parameter (alpha)
+# 2. neighbourhood radius (radius)
+# 3. number of iterations (rlen)
+
+#default parameters:
+#rlen = 100
+#alp = c(0.05,0.01)
+#rad = c(5,1)
+
+#Number of Nodes and structure of grid
+#e.g. 9 nodes with a 3x3 grid
+Nnodes = 12
+nx = 4
+ny = 3
+
+# number of iterations - rlen
+rlen = 1000           # number of times the complete dataset will be presented to the network
+#rlen -> use 100 for initial testing/demo -> increase to 1000+ when actually running
+
+# learning rate parameter - alpha
+alp = c(0.05,0.01)     # learning rate -> magnitude each node pattern is updated 
+# Requires vector of two numbers indicating the amount of change
+# Default (decrease from 0.05 to 0.01 linearly over rlen updates)
+
+# neighbourhood radius - radius
+rad = c(4,0)             # Number of surrounding nodes activated - # 75% SOM, 25% clustering.
+# value < 1 no surrounding nodes activated = k-means clustering
+#100% SOM example: rad = c(4,1)
+
+#grid structure of SOM ("rect", "hexagonal)
+gr = "rect"  #update manually in SOM algorithm.  This is for filename setup. 
+
+#data type - "raw","detrended","daily_anomaly"
+dt = "daily_anomaly"  #this is for filename setup
+
+
+#NOTE: this code is using the single - sequential method.  
+#Can also run in batch - refer to the documentation
+```
+
+```{r}
+### RUNNING THE SOM & SAVING VARIABLES
+
+set.seed(5) #this is important for consistent results between runs
+
+#input data 
+data = z500_daily_subset1d
+
+
+
+#SOM algorithm
+print("running SOM algorithm.......")
+K_SOM = som(X = data.matrix(data),
+            grid = somgrid(nx,ny,"rect","gaussian"),
+            rlen = rlen,
+            alpha = alp,
+            radius = rad,
+            keep.data = T,
+            dist.fcts = c("euclidean"),
+            normalizeDataLayers = FALSE)
+
+print("finished running SOM")
+```
+
+
+```{r}
+#Save variables
+K_SOM_d    <- data.frame(K_SOM$distances)        # get errors -> distances between grids
+K_SOM_SOM  <- data.frame(K_SOM$codes)            # get clusters grid
+tmp        <- data.frame(t(K_SOM_SOM))           # transpose
+K_SOM_SOMc <- data.frame(unlist(tmp))           # concatenate codebook vectors to 1 row
+K_SOM_win  <- data.frame(K_SOM$unit.classif)     # get clusters win
+K_SOM_grid <- data.frame(K_SOM$grid[["pts"]])    # get grid structure
+
+#column binds two vectors - one of the individual dates and one of the winning nodes
+winning_nodes <- cbind(z500_daily_subset_wide$date,K_SOM_win)      #finds the winning nodes of each timestep - daily data      
+colnames(winning_nodes) <- c("date","node")
+```
+
+
+```{r}
+# save variables as csvs
+
+write.csv(K_SOM_d, "K_SOM_d.csv")
+write.csv(K_SOM_SOM, "K_SOM_SOM.csv")
+write.csv(tmp, "tmp.csv")
+write.csv(K_SOM_SOMc, "K_SOM_SOMc.csv")
+write.csv(K_SOM_win, "K_SOM_win.csv")
+write.csv(K_SOM_grid, "K_SOM_grid.csv")
+write.csv(winning_nodes, "winning_nodes.csv")
+
+
+```
+
+```{r}
+
+#This attaches the winning nodes data to the original data subset, matching by "date"
+z500_daily_subset_winning_nodes <- dplyr::left_join(z500_daily_subset, winning_nodes, by = "date")
+```
+
+```{r}
+#This calculates the SOM composite for each node, for each coordinate
+som_means <- z500_daily_subset_winning_nodes %>%
+  group_by(lat, lon, node) %>%
+  summarise(som_z500_mean = mean(`hgt`, na.rm = TRUE))
+
+```
+```{r}
+write.csv(som_means, "som_means.csv")
+write.csv(z500_daily_subset_winning_nodes, "z500_daily_subset_winning_nodes.csv")
+```
+
+```{r}
+#install.packages("maptools")
+library(maptools)
+data(wrld_simpl)
+```
+
+```{r}
+#Plot the SOM composites with coastlines. 
+ggplot() + 
+  geom_tile(data = som_means, aes(x = lon, y = lat, fill = som_z500_mean)) + 
+  scale_fill_viridis() +
+  facet_wrap(~node) +
+  theme_bw() +
+  geom_polygon(data=wrld_simpl, 
+               aes(x=long, y=lat, group=group), fill='grey', colour = 'black', alpha = 0.5)  +
+  coord_cartesian(xlim=c(50,160), ylim=c(-70,-42)) +
+  geom_contour(data = som_means, aes(x = lon, y = lat, z = som_z500_mean), colour = "grey30") +
+  labs(title = "Composite z500 of each SOM - SOM input: daily anomalies 1900-2015",
+       fill = "Geopotential height anomaly (m)")
+```
+
+```{r}
+#calculate pearson pattern correlation between the composite winning node pattern and each daily input assigned to the winning node
+# refer to Gibson et al. 2017; Udy et al. 2021 (https://doi.org/10.1175/JCLI-D-20-0297.1) for more details
+
+
+nodes <- seq(from = 1, to = Nnodes, by = 1)
+
+calculate_som_temporal_correlation <- function(nodes){
+  
+  som_temporal_correlation <- left_join(z500_daily_subset_winning_nodes %>%
+                                                filter(node == nodes), 
+                                              som_means %>% filter(node == nodes)) %>%
+    group_by(date) %>%
+    yardstick::rsq(., `hgt`, som_z500_mean) %>%
+    mutate(node = nodes)
+  
+  som_temporal_correlation
+  
+}
+```
+
+```{r}
+### PLOT THE CORRELATION SCORES FOR EACH SOM NODE
+#as the number of nodes increase, the correlation scores should improve
+#as the number of nodes decrease, the correlation scores will likely go down. 
+#Determining the right number of nodes is subjective, but you can be guided by how many patterns you roughly
+#expect to find (i.e. stare at weather maps alot), and how sensitive the results
+
+som_temporal_correlations <- purrr::map_dfr(nodes, calculate_som_temporal_correlation)
+
+ggplot(data = som_temporal_correlations, aes((.estimate ^ 0.5), colour = node, group = node)) +
+  geom_density(size = 2) +
+  scale_color_viridis() +
+ facet_wrap(~node) + #uncomment this line to plot them as separate facets
+  theme_bw() +
+  labs(x = "Pearson correlation")
+
+```
+```{r}
+write.csv(som_temporal_correlations, "som_temporal_correlations_r.csv")
+```
+
+
+```{r}
+ggplot(data = som_temporal_correlations, aes((.estimate^0.5), group = node)) +
+  geom_histogram(color="black", fill="white", binwidth=0.05) +
+ facet_wrap(~node) + #uncomment this line to plot them as separate facets
+  theme_bw() +
+  labs(x = "Pearson correlation")
+```
+
+```{r}
+
+ggplot(data = som_temporal_correlations, aes(r, group = node)) +
+  geom_histogram(color="black", fill="white") +
+ facet_wrap(~node) + #uncomment this line to plot them as separate facets
+  theme_bw() +
+  labs(x = "Pearson correlation")
+```
+
+
+
+```{r}
+# add r column, .estimate column is r squared
+som_temporal_correlations$r<-som_temporal_correlations$.estimate^0.5
+```
+
+
+
+
+
+```{r}
+### SOME OTHER THINGS TO CHECK: 
+#Check the training progress (unlikely to reach optimal level with only 100 iterations)
+#changes - training process -> mean distance to closest unit
+#png(paste("SOM_training_",filename_end, sep=""), width = 888, height = 428)
+plot(K_SOM, type="changes")
+#dev.off()
+```
+
+```{r}
+#SET UP FILENAMES FOR OUTPUT FILES/PLOTS
+rundate = '2023-05-18' #update for each run
+run_num = 'testrun_08' #update for each run
+seas = 'daily_z500_anomaly_20CR'
+
+#set output directory
+#setwd('/Users/lauranilssen/') #update when running locally on Laura's laptop
+
+
+filename_end = paste("n",Nnodes,"_",dt,"_rlen",rlen,"_alp",alp[1],"to",alp[2],"_rad",rad[1],"to",rad[2],".png", sep="")  
+#sep removes spaces in filename
+print(filename_end)
+
+#write txt file with parameters for each run - save in subfolder
+sink(paste0(run_num,"_Parameters.txt"))
+cat(paste0("Run Date ",rundate))
+cat("\n")
+cat(paste0("Parameters: data = ",dt,",dist.fcts = euclidean, grid = ",gr,"Nodes = ",Nnodes, "rlen = ",rlen,", alp",alp[1],"to ",alp[2],", rad",rad[1],"to ",rad[2]))
+sink()
+```
+
+
+```{r}
+
+# Save SOM data txt file and netcdf file
+
+# save txt file
+write.table(winning_nodes, file=paste("SOM_",seas,"_",nx,"_",ny,".txt", sep=""),row.names=F, col.names=T, quote=F)
+print("file written as ....", quote=F)
+print(paste("SOM_",seas,"_",nx,"_",ny,".txt", sep=""))
+
+# save SOM netcdf file 
+
+#get lon & lat info from input netcdf
+nc  <- nc_open("anom_1900_2015.nc", readunlim=FALSE ) #readunlim = FALSE -> doesnt read in unlimted dimensions
+lon <- ncvar_get(nc, "lon")
+lat <- ncvar_get(nc, "lat")
+
+node_nc_LON  <- ncdim_def( "Lon", "degreesE", lon)
+node_nc_LAT  <- ncdim_def( "Lat", "degreesN", lat)
+node_nc_N    <- ncdim_def( "nodeN", "hPa", seq(1,nx*ny))
+node_nc_data <- ncvar_def( "node", "hPa", list(node_nc_LON, node_nc_LAT, node_nc_N)) #need lon, lat and node ('time' dimension - each 'timestep' = to a node)
+nc_new <- nc_create(paste("SOM_",seas,"_",nx,"_",ny,".nc", sep=""), node_nc_data)
+# put values into nc file and close
+ncvar_put(nc=nc_new, varid=node_nc_data, K_SOM_SOMc[,1])
+nc_close(nc_new)
+print("nc file written")
+```
+
+```{r}
+###OTHER PLOTS AVAILABLE IN KOHONEN PACKAGE
+
+#### quality & count ####
+#quality - shows the mean distance mapped to a unit to the codebook vector of that unit. 
+# smaller distances = objects (e.g daily z500) represented better by the codebook vectors. 
+# counts - number of objects mapped to SOM nodes - frequency?
+
+counts <- plot(K_SOM, type = "counts", 
+               palette = plasma, ncolors = 12, 
+               shape = "straight")
+quality <- plot(K_SOM, type = "quality", 
+                palette = viridis, ncolors = 12,
+                shape = "straight")
+
+#U matrix/distance neighbours & hierachial clustering
+plot(K_SOM,type = "dist.neighbours", 
+     main = "SOM neighbour distances & clusters",
+     palette = viridis,
+     shape = "straight")
+#hierarchial clustering to cluster the codebook vectors
+som.hc <- cutree(hclust(object.distances(K_SOM,"codes")),6)  #random no. of clusters selected
+add.cluster.boundaries(K_SOM, som.hc)
+```
+
