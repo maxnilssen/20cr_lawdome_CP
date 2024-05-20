@@ -10,6 +10,9 @@ NetCDF file of the composite maps of the 12 SOM nodes
 SOM_20CR_4_3_1900.csv
 CSV file of each date from 1 Jan 1900 to 31 Dec 2015, where each date is assigned one of the 12 SOM nodes
 
+som_temporal_correlations_r.csv
+CSV file with each date from 1 Jan 1900 to 31 Dec 2015, the node for each date, and the pearson pattern correlation score for each date
+
 dss_winter.csv
 CSV file of annual snowfall accumuluation (metres ice equivalent) at Dome Summit South, Law Dome, 1836-2015. Available from https://data.aad.gov.au/metadata/records/fulldisplay/DSS_2k_data_compilation
 
@@ -49,3 +52,5 @@ SOM code:
 
 soms1900_4_3.Rmd (this requires a NetCDF file of 500hPa geoptential height daily anomalies over the study region, which is a large file - around 1.1GB)
 
+Code for statistical tests regarding the 20CR daily precipitation associated with each node:
+node_precip_tests.Rmd
