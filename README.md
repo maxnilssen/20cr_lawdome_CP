@@ -30,12 +30,14 @@ CSV file with each year from 1900 to 2015, with the annual snowfall accumulation
 
 CODE FILES:
 
+SOM code:
+soms1900_4_3.Rmd (this requires a NetCDF file of 500hPa geoptential height daily anomalies over the study region, which is a large file - around 1.1GB. This data is available from https://psl.noaa.gov/data/gridded/data.20thC_ReanV3.html, but will require joining multiple files together (one per year) and then subsetting for the study area)
+
 Code for generating datasets:
 making_datasets.Rmd (this makes daily_node_precip.csv and annual_accum_precip_LD.csv)
 
 
 Code for making figures:
-
 fig02_precip_accum.Rmd
 fig04_obs_types_nodes.Rmd
 fig05_boxplot_barplot.Rmd
@@ -43,14 +45,9 @@ linear_models_fig06.Rmd
 somcor_histograms.Rmd
 
 Code for tables:
-
 table1.Rmd
 table3_corrs.Rmd
 trend_table.Rmd
-
-SOM code:
-
-soms1900_4_3.Rmd (this requires a NetCDF file of 500hPa geoptential height daily anomalies over the study region, which is a large file - around 1.1GB)
 
 Code for statistical tests regarding the 20CR daily precipitation associated with each node:
 node_precip_tests.Rmd
