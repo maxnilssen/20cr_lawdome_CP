@@ -1,0 +1,49 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This notebook compairs the 20CRv3 daily precipitation at LD associated with each node
+```{r}
+#rm(list = ls()) # clear memory
+library(tidyverse)
+
+library(dplyr)
+library(ggplot2)
+
+
+```
+
+```{r}
+daily <- read_csv("daily_node_precip.csv")
+head(daily)
+```
+
+```{r}
+
+# plot histograms of precip associated with each node
+
+
+ggplot(daily, aes(precip_daily)) +
+  geom_histogram(binwidth=0.1) +
+  facet_wrap(~node)
+
+# the histograms show that the data is very positively skewed: lots of 0 values, lots of lower values, very few high values
+```
+
+```{r}
+#kruskal-wallis test, which is a nonparametric method to compare more than two groups
+# p value < 0.05 so can conclude there ar significant difference between groups
+kruskal.test(precip_daily ~ node,data=daily)
+```
+
+```{r}
+# this tests which of the medians are different
+# the bonf p.adj method is more conservative, it multiplies the p values by the number of comparisons
+# this reduces the rate of type 1 error (rejecting null hyp when it's actually true, ie saying that the medians aren't different when they actually are), but increases risk of type 2 error (saying the means are diff when they actually aren't) 
+# 66 total pairings
+# with this method, 7 pairs a p val > 0.05
+# 59 with p < 0.05
+# pairs with insignificant difference: 2 and 6, 2 and 11, 4 and 8, 5 and 9, 5 and 10, 6 and 11, 8 and 12
+pairwise.wilcox.test(daily$precip_daily, daily$node, p.adj="bonf")
+```
