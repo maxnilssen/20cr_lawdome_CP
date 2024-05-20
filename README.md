@@ -24,5 +24,11 @@ NetCDF file of 20CRv3 daily mean 3-hourly precipitation rate (65-69S, 110-115E).
 CODE FILES:
 
 Code for making figures:
+fig02_precip_accum.Rmd
 
+fig04_obs_types_nodes.Rmd
+
+fig05_boxplot_barplot.Rmd
+
+fig05_boxplot_barplot.Rmd
 
