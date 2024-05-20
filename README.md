@@ -19,16 +19,33 @@ NetCDF file of the number of assimilated observations in ISPDv4.7, on a 2x2 degr
 sprate_1900_2015_small.nc
 NetCDF file of 20CRv3 daily mean 3-hourly precipitation rate (65-69S, 110-115E). Downloaded from NCI, also available at https://psl.noaa.gov/data/gridded/data.20thC_ReanV3.html
 
+daily_node_precip.csv
+CSV file with each date from 1 Jan 1900 to 31 Dec 2015, along with the following for each day: node, 20CRv3 daily precip (mm) at LD coordinates (67S, 113E), precipitation type (zero, normal (<90th percentile), high (90-99th percentile), extreme (>99th percentile))
 
+annual_accum_precip_LD.csv
+CSV file with each year from 1900 to 2015, with the annual snowfall accumulation at DSS (m ice equivalent), and the annual precip amount (mm) at LD coordinates (67S, 113E)
 
 CODE FILES:
 
+Code for generating datasets:
+making_datasets.Rmd (this makes daily_node_precip.csv and annual_accum_precip_LD.csv)
+
+
 Code for making figures:
+
 fig02_precip_accum.Rmd
-
 fig04_obs_types_nodes.Rmd
-
 fig05_boxplot_barplot.Rmd
+linear_models_fig06.Rmd
+somcor_histograms.Rmd
 
-fig05_boxplot_barplot.Rmd
+Code for tables:
+
+table1.Rmd
+table3_corrs.Rmd
+trend_table.Rmd
+
+SOM code:
+
+soms1900_4_3.Rmd (this requires a NetCDF file of 500hPa geoptential height daily anomalies over the study region, which is a large file - around 1.1GB)
 
