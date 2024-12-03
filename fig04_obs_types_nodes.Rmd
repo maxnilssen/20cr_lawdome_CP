@@ -59,6 +59,7 @@ head(obcount_s50_annual)
 
 obcountplot_s50 <-
 obcount_s50_annual %>% 
+  
   filter(year >= 1900) %>% 
   ggplot(aes(year, annual_obs_study_s50))+
   geom_line() +
@@ -66,14 +67,15 @@ obcount_s50_annual %>%
   scale_y_log10(labels = scales::comma) +
   theme_bw() +
   theme(axis.line = element_line(color='black', size=0.3),
+        
         plot.background = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-         axis.title.x=element_blank(),
-         axis.text=element_text(size=8),
-      axis.title.y=element_text(size=9),
-    #  axis.title.y = element_text(size=7),
-       aspect.ratio=6/20
+        axis.title.x=element_blank(),
+        axis.text=element_text(size=8),
+        axis.title.y=element_text(size=9),
+     #  axis.title.y = element_text(size=7),
+        aspect.ratio=6/20
       ) +
   scale_x_continuous(breaks = seq(1900,2015,10)) +
   labs(y = "Observation count")
@@ -84,8 +86,9 @@ obcountplot_s50
 ```{r}
 # make df that shows the number of days each type per year
 type_freq<- daily %>%
+  mutate(Type = factor(Type)) %>%
   group_by(year) %>%
-  count(Type, .drop = FALSE) %>% 
+  count(Type,.drop = FALSE) %>% 
   mutate(pct = prop.table(n)) 
 
 head(type_freq)
@@ -98,27 +101,29 @@ head(type_freq)
 type_freq_plot_nonormal <-
   type_freq %>% 
   filter(Type != "Normal") %>% 
-ggplot(aes(x=year, y=n, color=Type)) +
-   geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
+  
+  ggplot(aes(x=year, y=n, color=Type)) +
+  
+  geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
   geom_line() +
-    scale_color_manual(values=c(
+  scale_color_manual(values=c(
     "#035586",
     "#3B94D4",
-      "grey65" )) +
-  
+    "grey65" )) +
   theme_bw() +
   theme(axis.line = element_line(color='black', size=0.3),
+        
         plot.background = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
       #  panel.border = element_blank(),
-         legend.text=element_text(size=9),
-      legend.title=element_text(size=9),
-         axis.title.x=element_blank(),
-         axis.text=element_text(size=8),
-      axis.title.y=element_text(size=9),
+        legend.text=element_text(size=9),
+        legend.title=element_text(size=9),
+        axis.title.x=element_blank(),
+        axis.text=element_text(size=8),
+        axis.title.y=element_text(size=9),
      # axis.title.y=element_text(size=9),
-       aspect.ratio=6/20
+        aspect.ratio=6/20
      #legend.position = "none"
       ) +
   scale_x_continuous(breaks = seq(1900,2015,10)) +
@@ -154,34 +159,48 @@ daily %>%
   mutate(pct = prop.table(n)) %>% 
   ggplot(aes(x=year, y=pct, fill=node_o)) +
   geom_col(position = position_fill(reverse=FALSE), width=0.9) +
+#   scale_fill_manual(values=c(
+# "#dee8ff",
+# "#bbb9e4",
+# "#9484C9",
+# "#623EA3",
+# "#2c0664",
+# "#D1D1D1",
+# "#969696",
+# "#addd8e",
+# "#31a354",
+# "#F9AEC0",
+# "#f768a1",
+# "#B90C7D"),
   scale_fill_manual(values=c(
-"#dee8ff",
-"#bbb9e4",
-"#9484C9",
-"#623EA3",
-"#2c0664",
+"#f8edf3",
+"#e3b5ce",
+"#cc79a7",
+"#94386b",
+"#4a1c35",
 "#D1D1D1",
-"#969696",
-"#addd8e",
-"#31a354",
-"#F9AEC0",
-"#f768a1",
-"#B90C7D"),
+"#666666",
+"#00e6a8",
+"#009970",
+"#ffe7b3",
+"#ffc64d",
+"#cc8b00"),
 limits=c("11", "10", "8", "5", "2",
           "6", "7",
           "9", "12", 
           "4", "3", "1" 
           )) +
   scale_y_continuous(labels = scales::percent) +
-   geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
+  
+  geom_vline(xintercept=c(1912, 1948, 1957, 1979), alpha=0.3) +
   theme_bw() +
   theme(
     plot.background = element_blank(),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.text=element_text(size=8),
-      legend.text=element_text(size=8),
-      legend.title=element_text(size=9),
+    legend.text=element_text(size=8),
+    legend.title=element_text(size=9),
     axis.title=element_text(size=9),
    # axis.title.y=element_text(size=9),
     aspect.ratio=7/20,
@@ -206,52 +225,6 @@ p
 
 
 ```{r}
-save_plot("fig04.pdf", p3, ncol = 1, base_height=6.5, base_width =7.2)
+save_plot("fig04_.pdf", p, ncol = 1, base_height=6.5, base_width =7.2)
 ```
-
-
-
-
-
-```{r}
-# calculate the % of precip that came from each precip type, 1900-2015
-daily %>% 
-  group_by(Type) %>% 
-  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
-  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
-
-```
-
-
-```{r}
-# calculate the % of precip that came from each precip type, 1900-1947
-daily %>% 
-  filter(year<1948) %>% 
-  group_by(Type) %>% 
-  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
-  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
-
-```
-
-```{r}
-# calculate the % of precip that came from each precip type, 1948-1956
-daily %>% 
-  filter(year>=1948 & year <1957) %>% 
-  group_by(Type) %>% 
-  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
-  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
-
-```
-
-```{r}
-# calculate the % of precip that came from each precip type, 1957-2015
-daily %>% 
-  filter(year>=1957) %>% 
-  group_by(Type) %>% 
-  summarise(total_precip =sum(precip_daily), no_days = n()) %>% 
-  mutate(pct_total_precip = prop.table(total_precip), pct_no_days = prop.table(no_days)) 
-
-```
-
-
 
