@@ -81,4 +81,29 @@ ggplot() +
 ggsave("fig02_step.pdf", width=8, height=3.5)
 
 ```
+```{r}
+# calculating how much precip of each type contributed to total precip for 1900-2015
+
+E99_LD %>% group_by(Type) %>%
+  summarise(precip_by_type = sum(total_precip)) %>%
+  mutate(pct = prop.table(precip_by_type))
+```
+
+```{r}
+# calculating how much precip of each type contributed to total precip for 1900-1956
+
+E99_LD %>% filter( year <= 1956) %>%
+  group_by(Type) %>%
+  summarise(precip_by_type = sum(total_precip)) %>%
+  mutate(pct = prop.table(precip_by_type))
+```
+
+```{r}
+# calculating how much precip of each type contributed to total precip for 1957-2015
+
+E99_LD %>% filter( year >= 1957) %>%
+  group_by(Type) %>%
+  summarise(precip_by_type = sum(total_precip)) %>%
+  mutate(pct = prop.table(precip_by_type))
+```
 
