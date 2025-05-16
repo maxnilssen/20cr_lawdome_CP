@@ -1,6 +1,6 @@
 # 20cr_lawdome
 
-This repository contains code and data for Nilssen et al. (submitted May 2024), "Evaluating the Twentieth Century Reanalysis Version 3 with synoptic typing and East Antarctic ice core accumulation", submitted to Climate of the Past
+This repository contains code and data for Nilssen, M. T., Udy, D. G., and Vance, T. R.: Evaluating the 20th Century Reanalysis Version 3 with synoptic typing and an East Antarctic ice core accumulation record, Clim. Past, 21, 897–917, https://doi.org/10.5194/cp-21-897-2025, 2025.
 
 DATA FILES:
 
